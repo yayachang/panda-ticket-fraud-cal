@@ -646,7 +646,9 @@
                 }
             ];
 
+            // Sum of max values: 15+15+10+20+15+15+20+15+15+20 = 160
             var MAX_SCORE = 160;
+            var FLAG_EMOJI = { red: "🔴 ", orange: "🟡 ", green: "🟢 " };
 
             function getSelectedValue(name) {
                 var radios = document.querySelectorAll('input[name="' + name + '"]');
@@ -727,7 +729,7 @@
                 for (var j = 0; j < flags.length; j++) {
                     var li = document.createElement("li");
                     li.className = flags[j].css;
-                    li.textContent = (flags[j].css === "red" ? "🔴 " : flags[j].css === "orange" ? "🟡 " : "🟢 ") + flags[j].text;
+                    li.textContent = (FLAG_EMOJI[flags[j].css] || "") + flags[j].text;
                     flagList.appendChild(li);
                 }
 
