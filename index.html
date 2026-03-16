@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐼 粉熊防詐檢測器 — 演唱會票券詐騙風險計算機</title>
+    <style>
+        :root {
+            --color-safe: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --color-primary: #6c5ce7;
+            --color-bg: #f8f9fa;
+            --color-card: #ffffff;
+            --color-text: #2d3436;
+            --color-muted: #636e72;
+            --border-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 20px 16px 40px;
+        }
+
+        header {
+            text-align: center;
+            padding: 32px 0 24px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--color-muted);
+            font-size: 0.95rem;
+        }
+
+        .section {
+            background: var(--color-card);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .icon {
+            font-size: 1.3rem;
+        }
+
+        .question {
+            margin-bottom: 18px;
+        }
+
+        .question:last-child {
+            margin-bottom: 0;
+        }
+
+        .question label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+
+        .question .hint {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--color-muted);
+            margin-bottom: 8px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.92rem;
+        }
+
+        .option-label:hover {
+            border-color: var(--color-primary);
+            background: #f0edff;
+        }
+
+        .option-label input {
+            accent-color: var(--color-primary);
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .option-label input:checked + span {
+            font-weight: 600;
+        }
+
+        .option-label:has(input:checked) {
+            border-color: var(--color-primary);
+            background: #f0edff;
+        }
+
+        .btn-calculate {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            background: var(--color-primary);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-calculate:hover {
+            background: #5a4bd1;
+        }
+
+        .btn-calculate:active {
+            transform: scale(0.98);
+        }
+
+        /* Result */
+        .result-card {
+            display: none;
+            text-align: center;
+            padding: 32px 24px;
+        }
+
+        .result-card.visible {
+            display: block;
+        }
+
+        .result-emoji {
+            font-size: 3.5rem;
+            margin-bottom: 12px;
+        }
+
+        .result-level {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .result-score {
+            font-size: 1rem;
+            color: var(--color-muted);
+            margin-bottom: 20px;
+        }
+
+        .result-bar-track {
+            width: 100%;
+            height: 14px;
+            background: #e9ecef;
+            border-radius: 7px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .result-bar-fill {
+            height: 100%;
+            border-radius: 7px;
+            transition: width 0.8s ease;
+        }
+
+        .result-details {
+            text-align: left;
+        }
+
+        .result-details h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .flag-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .flag-list li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .flag-list li.red {
+            background: #ffeaea;
+            color: #c0392b;
+        }
+
+        .flag-list li.orange {
+            background: #fff5e0;
+            color: #e67e22;
+        }
+
+        .flag-list li.green {
+            background: #e8f8f0;
+            color: #27ae60;
+        }
+
+        .btn-reset {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--color-primary);
+            background: transparent;
+            border: 2px solid var(--color-primary);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: var(--color-primary);
+            color: #fff;
+        }
+
+        footer {
+            text-align: center;
+            padding: 24px 0;
+            color: var(--color-muted);
+            font-size: 0.8rem;
+        }
+
+        footer a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+
+        .error-msg {
+            color: var(--color-danger);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .error-msg.visible {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.4rem;
+            }
+            .section {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐼 粉熊防詐檢測器</h1>
+            <p>演唱會／活動票券二手交易詐騙風險評估工具</p>
+        </header>
+
+        <form id="fraudForm" autocomplete="off">
+            <!-- Section 1: Account Health -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="icon">👤</span> 一、賣家帳號可信度
+                </div>
+
+                <div class="question">
+                    <label>1. 賣家帳號年資</label>
+                    <span class="hint">帳號註冊時間越短，風險越高</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_account_age" value="0" />
+                            <span>超過 2 年，且有持續活動紀錄</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_account_age" value="5" />
+                            <span>1～2 年</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_account_age" value="10" />
+                            <span>不滿 1 年，或近期才突然活躍</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_account_age" value="15" />
+                            <span>無法確認／賣家拒絕透露</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>2. 賣家過往貼文內容</label>
+                    <span class="hint">真實帳號通常有日常生活內容，詐騙帳號多為轉售票券資訊</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_post_history" value="0" />
+                            <span>有豐富生活化貼文，看起來是真人帳號</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_post_history" value="5" />
+                            <span>貼文不多，但內容正常</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_post_history" value="10" />
+                            <span>幾乎都是讓票／售票資訊</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_post_history" value="15" />
+                            <span>帳號無任何貼文，或頭像是網路美圖</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>3. 是否有共同好友／追蹤者</label>
+                    <span class="hint">在飯圈中有共同追蹤的粉絲或大站，可信度較高</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_mutual_friends" value="0" />
+                            <span>有多位共同好友或粉絲圈內認識的人</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_mutual_friends" value="5" />
+                            <span>有少數共同追蹤</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_mutual_friends" value="10" />
+                            <span>完全沒有共同好友</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Transaction Red Flags -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="icon">🚩</span> 二、交易行為異常點
+                </div>
+
+                <div class="question">
+                    <label>4. 賣家是否願意面交或使用官方轉票系統？</label>
+                    <span class="hint">拒絕面交並以各種藉口推託，是高風險訊號</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_face_trade" value="0" />
+                            <span>同意面交或使用官方轉票平台</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_face_trade" value="10" />
+                            <span>偏好線上交易，但態度合理</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_face_trade" value="20" />
+                            <span>以各種藉口（人在國外、出差、家人住院）拒絕面交</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>5. 賣家是否營造急迫感？</label>
+                    <span class="hint">「很多人在排」「不快點就給別人了」是常見的詐騙話術</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_urgency" value="0" />
+                            <span>語氣平和，給予充足考慮時間</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_urgency" value="5" />
+                            <span>稍微催促，但尚可接受</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_urgency" value="15" />
+                            <span>不斷催促、製造焦慮感，要求立刻匯款</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>6. 票券售價是否合理？</label>
+                    <span class="hint">低於原價 8 折以下或遠低於市場行情，通常有詐</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_price" value="0" />
+                            <span>接近原價或合理加價</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_price" value="5" />
+                            <span>略低於原價（8～9 折）</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_price" value="15" />
+                            <span>遠低於原價（8 折以下）或低於市場行情很多</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>7. 賣家要求的付款方式</label>
+                    <span class="hint">銀行轉帳無保障、不明連結可能是釣魚網站</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_payment" value="0" />
+                            <span>面交付現／官方平台擔保交易</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_payment" value="10" />
+                            <span>銀行轉帳或電子錢包（LINE Pay 轉帳等）</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_payment" value="20" />
+                            <span>要求點不明連結「驗證身份」或使用加密貨幣等不可追蹤方式</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Ticket Validation -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="icon">🎫</span> 三、票券資訊驗證
+                </div>
+
+                <div class="question">
+                    <label>8. 賣家能否提供精確座位資訊？</label>
+                    <span class="hint">模稜兩可的座位描述（如「紅2區前10排」而非精確座位號）是可疑訊號</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_seat_info" value="0" />
+                            <span>能提供精確的區域、排數、座位號</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_seat_info" value="5" />
+                            <span>能提供區域和大致位置</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_seat_info" value="15" />
+                            <span>說法模糊或拒絕提供座位細節</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>9. 賣家能否提供購票證明？</label>
+                    <span class="hint">螢幕錄影（從聊天切換到售票 App）比截圖更可靠，截圖容易造假</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_proof" value="0" />
+                            <span>願意提供螢幕錄影展示購票紀錄</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_proof" value="5" />
+                            <span>僅提供截圖作為證明</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_proof" value="15" />
+                            <span>拒絕提供任何購票證明</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>10. 取票方式是否合理？</label>
+                    <span class="hint">要求提供身分證號「代為取票」可能是詐騙陷阱</span>
+                    <div class="options">
+                        <label class="option-label">
+                            <input type="radio" name="q_pickup" value="0" />
+                            <span>透過官方管道轉票，不需個人資料</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_pickup" value="10" />
+                            <span>需提供姓名等基本資訊（官方轉票流程需要）</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="q_pickup" value="20" />
+                            <span>要求提供身分證號或其他敏感個資來「取票」</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <p id="errorMsg" class="error-msg">⚠️ 請回答所有問題後再進行檢測</p>
+            <button type="button" class="btn-calculate" id="btnCalculate">🔍 開始檢測風險</button>
+        </form>
+
+        <!-- Result -->
+        <div class="section result-card" id="resultCard">
+            <div class="result-emoji" id="resultEmoji"></div>
+            <div class="result-level" id="resultLevel"></div>
+            <div class="result-score" id="resultScore"></div>
+
+            <div class="result-bar-track">
+                <div class="result-bar-fill" id="resultBar"></div>
+            </div>
+
+            <div class="result-details">
+                <h3>📋 檢測細節：</h3>
+                <ul class="flag-list" id="flagList"></ul>
+            </div>
+
+            <button type="button" class="btn-reset" id="btnReset">重新檢測</button>
+        </div>
+
+        <footer>
+            <p>🐼 粉熊防詐檢測器 — 保護每一位粉絲的追星路</p>
+            <p>此工具僅供參考，實際交易請務必提高警覺</p>
+            <p style="margin-top:8px;">
+                <a href="https://github.com/yayachang/panda-ticket-fraud-cal" target="_blank" rel="noopener">GitHub</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            var QUESTIONS = [
+                {
+                    name: "q_account_age",
+                    label: "賣家帳號年資",
+                    thresholds: [
+                        { max: 0, text: "帳號年資充足", css: "green" },
+                        { max: 5, text: "帳號年資尚可", css: "orange" },
+                        { max: 100, text: "帳號年資不足或無法確認", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_post_history",
+                    label: "賣家貼文內容",
+                    thresholds: [
+                        { max: 0, text: "貼文正常，看起來是真人帳號", css: "green" },
+                        { max: 5, text: "貼文偏少但內容正常", css: "orange" },
+                        { max: 100, text: "貼文異常，疑似假帳號", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_mutual_friends",
+                    label: "共同好友",
+                    thresholds: [
+                        { max: 0, text: "有共同好友，帳號較可信", css: "green" },
+                        { max: 5, text: "僅少數共同追蹤", css: "orange" },
+                        { max: 100, text: "完全沒有共同好友", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_face_trade",
+                    label: "面交意願",
+                    thresholds: [
+                        { max: 0, text: "同意面交或官方轉票", css: "green" },
+                        { max: 10, text: "偏好線上但態度合理", css: "orange" },
+                        { max: 100, text: "以各種藉口拒絕面交 ⚠️", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_urgency",
+                    label: "急迫感營造",
+                    thresholds: [
+                        { max: 0, text: "語氣平和，不催促", css: "green" },
+                        { max: 5, text: "稍有催促", css: "orange" },
+                        { max: 100, text: "不斷催促製造焦慮 ⚠️", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_price",
+                    label: "價格合理性",
+                    thresholds: [
+                        { max: 0, text: "價格合理", css: "green" },
+                        { max: 5, text: "價格略低於原價", css: "orange" },
+                        { max: 100, text: "價格異常偏低 ⚠️", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_payment",
+                    label: "付款方式",
+                    thresholds: [
+                        { max: 0, text: "面交付現或平台擔保交易", css: "green" },
+                        { max: 10, text: "銀行轉帳（無保障）", css: "orange" },
+                        { max: 100, text: "要求點不明連結或不可追蹤方式 ⚠️", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_seat_info",
+                    label: "座位資訊",
+                    thresholds: [
+                        { max: 0, text: "能提供精確座位資訊", css: "green" },
+                        { max: 5, text: "座位資訊模糊", css: "orange" },
+                        { max: 100, text: "拒絕提供座位細節 ⚠️", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_proof",
+                    label: "購票證明",
+                    thresholds: [
+                        { max: 0, text: "願意提供螢幕錄影", css: "green" },
+                        { max: 5, text: "僅提供截圖（易造假）", css: "orange" },
+                        { max: 100, text: "拒絕提供購票證明 ⚠️", css: "red" }
+                    ]
+                },
+                {
+                    name: "q_pickup",
+                    label: "取票方式",
+                    thresholds: [
+                        { max: 0, text: "官方管道轉票，安全", css: "green" },
+                        { max: 10, text: "需提供基本資訊", css: "orange" },
+                        { max: 100, text: "要求提供敏感個資 ⚠️", css: "red" }
+                    ]
+                }
+            ];
+
+            // Sum of max values: 15+15+10+20+15+15+20+15+15+20 = 160
+            var MAX_SCORE = 160;
+            var FLAG_EMOJI = { red: "🔴 ", orange: "🟡 ", green: "🟢 " };
+
+            function getSelectedValue(name) {
+                var radios = document.querySelectorAll('input[name="' + name + '"]');
+                for (var i = 0; i < radios.length; i++) {
+                    if (radios[i].checked) {
+                        return parseInt(radios[i].value, 10);
+                    }
+                }
+                return null;
+            }
+
+            function allAnswered() {
+                for (var i = 0; i < QUESTIONS.length; i++) {
+                    if (getSelectedValue(QUESTIONS[i].name) === null) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function getFlag(q, value) {
+                for (var i = 0; i < q.thresholds.length; i++) {
+                    if (value <= q.thresholds[i].max) {
+                        return { text: q.label + "：" + q.thresholds[i].text, css: q.thresholds[i].css };
+                    }
+                }
+                return { text: q.label + "：未知", css: "orange" };
+            }
+
+            function calculate() {
+                if (!allAnswered()) {
+                    document.getElementById("errorMsg").classList.add("visible");
+                    return;
+                }
+                document.getElementById("errorMsg").classList.remove("visible");
+
+                var totalScore = 0;
+                var flags = [];
+
+                for (var i = 0; i < QUESTIONS.length; i++) {
+                    var val = getSelectedValue(QUESTIONS[i].name);
+                    totalScore += val;
+                    flags.push(getFlag(QUESTIONS[i], val));
+                }
+
+                var pct = Math.round((totalScore / MAX_SCORE) * 100);
+                var emoji, level, barColor;
+
+                if (pct <= 20) {
+                    emoji = "✅";
+                    level = "低風險 — 交易相對安全";
+                    barColor = "var(--color-safe)";
+                } else if (pct <= 50) {
+                    emoji = "⚠️";
+                    level = "中風險 — 請提高警覺";
+                    barColor = "var(--color-warning)";
+                } else {
+                    emoji = "🚨";
+                    level = "高風險 — 極可能是詐騙！";
+                    barColor = "var(--color-danger)";
+                }
+
+                document.getElementById("resultEmoji").textContent = emoji;
+                document.getElementById("resultLevel").textContent = level;
+                document.getElementById("resultLevel").style.color = barColor;
+                document.getElementById("resultScore").textContent =
+                    "風險指數：" + totalScore + " / " + MAX_SCORE + "（" + pct + "%）";
+
+                var bar = document.getElementById("resultBar");
+                bar.style.width = "0%";
+                bar.style.background = barColor;
+                setTimeout(function () {
+                    bar.style.width = pct + "%";
+                }, 50);
+
+                var flagList = document.getElementById("flagList");
+                flagList.innerHTML = "";
+                for (var j = 0; j < flags.length; j++) {
+                    var li = document.createElement("li");
+                    li.className = flags[j].css;
+                    li.textContent = (FLAG_EMOJI[flags[j].css] || "") + flags[j].text;
+                    flagList.appendChild(li);
+                }
+
+                document.getElementById("fraudForm").style.display = "none";
+                document.getElementById("resultCard").classList.add("visible");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+
+            function reset() {
+                document.getElementById("fraudForm").style.display = "block";
+                document.getElementById("resultCard").classList.remove("visible");
+                var radios = document.querySelectorAll('#fraudForm input[type="radio"]');
+                for (var i = 0; i < radios.length; i++) {
+                    radios[i].checked = false;
+                }
+                document.getElementById("errorMsg").classList.remove("visible");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+
+            document.getElementById("btnCalculate").addEventListener("click", calculate);
+            document.getElementById("btnReset").addEventListener("click", reset);
+        })();
+    </script>
+</body>
+</html>
